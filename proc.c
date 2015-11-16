@@ -464,3 +464,9 @@ procdump(void)
     cprintf("\n");
   }
 }
+
+int
+clone(void(*fcn)(void*), void *arg, void *stack)
+{
+
+}
