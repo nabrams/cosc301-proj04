@@ -93,5 +93,20 @@ sys_uptime(void)
 int
 sys_clone(void)
 {
-//need to complete
+    int fcn;
+    int arg;
+    int stack;
+
+    if (argint(0, &fcn) < 0) {
+        return -1;
+    } else if (argint (0, &arg) < 0) {
+        return -1;
+    } else if (argint(2, &stack) < 0) return -1;
+    return clone((void*)fcn, (void*) arg, (void*) stack);
+}
+
+int sys_join(void) {
+    int pid;
+    if (argint(0, &pid) < 0) return -1;
+    return join(pid);
 }
