@@ -508,11 +508,11 @@ clone(void(*fcn)(void*), void *arg, void *stack)
     // Clear %eax so that fork returns 0 in the child.
     np->tf->eax = 0;
 
-    for(i = 0; i < NOFILE; i++)
+    for(i = 0; i < NOFILE; i++){
         if(proc->ofile[i])
         np->ofile[i] = filedup(proc->ofile[i]);
     np->cwd = idup(proc->cwd);
-
+    }
     safestrcpy(np->name, proc->name, sizeof(proc->name));
  
     pid = np->pid;
@@ -547,28 +547,33 @@ int join(int pid)
 
   acquire(&ptable.lock);
   for(;;){
+    havekids=0;
     //Asserts that the pid's all match between parent/child
     for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-        if (p->pid == pid) {
-            if (pid == -1) return -1;
-        }
-    }
-    havekids = 0;
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-      if(p->parent != proc)
-        continue;
-      havekids = 1;
+        if (p->parent != proc || p->pgdir != proc->pgdir || proc->pid == p->pid)
+            continue;
+        havekids=1;
+        
+
       if(p->state == ZOMBIE){
         // Found one.
         pid = p->pid;
+        //int *tempadd = 0xffff;
+        //void *stackadd = (void *)p->parent->tf->esp + 7*sizeof(void*);
+        //*(uint *)stackadd = p->tf->ebp;
+        //*(uint *)stackadd += 3 * sizeof(void *) - 4096;
         kfree(p->kstack);
+        
         p->kstack = 0;
-        freevm(p->pgdir);
+        //freevm(p->pgdir);
+
         p->state = UNUSED;
         p->pid = 0;
         p->parent = 0;
         p->name[0] = 0;
         p->killed = 0;
+        //*stack = p->stack;
+        //*tempadd = pid;
         release(&ptable.lock);
         return pid;
       }
@@ -585,4 +590,5 @@ int join(int pid)
 
     //return pid;
     }
+    return 0;
 }

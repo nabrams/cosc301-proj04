@@ -3,17 +3,18 @@
 #include "fcntl.h"
 #include "user.h"
 #include "x86.h"
-#define SSZ     64
+#include "mmu.h"
+//#define SSZ     64
 
 /*
  * This is where you'll need to implement the user-level functions
  */
 
-uint t_stack[SSZ];
+void *t_stack[64];
 
 
 void lock_init(lock_t *lock) {
-    lock->locked = 1;
+    lock->locked = 0;
 }
 
 void lock_acquire(lock_t *lock) {
@@ -26,17 +27,20 @@ void lock_release(lock_t *lock) {
 
 int thread_join(int pid) {
     int t_pid = join(pid);
-    if (t_pid > 0 && t_pid < SSZ) free((void*)(t_stack[t_pid-1]));
+    if (t_pid > 0 && t_pid < 64) free(t_stack[t_pid]);
     return t_pid;
 
 }
 
 int thread_create(void (*start_routine)(void *), void *arg) {
-    void *stack = malloc(4096);
-    if ((uint)stack % 4096) {
-        stack += 4096 - ((uint)stack % 4096);
+    void *stack = malloc(PGSIZE*2);
+    if ((uint)stack % PGSIZE) {
+        stack += (PGSIZE - (uint)stack % PGSIZE);
     }
     int t_pid = clone(start_routine, arg, stack);
-    if (t_pid > 0 && t_pid < SSZ) t_stack[t_pid-1] = (uint)stack;
-    return t_pid;
+    if (t_pid > 0 && t_pid < 64) {
+        t_stack[t_pid] = stack;
+        return t_pid;
+    }
+    return -1;
 }
